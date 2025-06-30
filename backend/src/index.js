@@ -50,8 +50,11 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// app.listen(PORT, () => {
+//   console.log(`Server running on port ${PORT}`);
+app.get('/', (req, res) => {
+  res.send('Express Server on Vercel');
+
   
   // Initialize storage
   const storage = require('./utils/storage');
