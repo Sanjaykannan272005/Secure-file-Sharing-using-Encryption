@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "fileshare-14c20",
+    "firebase storage:cors set cors.json": "fileshare-14c20"
+  },
+  "targets": {},
+  "etags": {}
+}

@@ -1,0 +1,25 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+
+// Firestore rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /files/{fileId} {
+      // Allow read/write if user is authenticated and is the owner
+      allow create: if request.auth != null;
+      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
+      
+      // Allow read for shared files
+      allow read: if request.auth != null && 
+                   resource.data.sharingLink != null && 
+                   (resource.data.sharingLink.expiresAt == null || 
+                    resource.data.sharingLink.expiresAt > request.time);
+    }
+  }
+}
