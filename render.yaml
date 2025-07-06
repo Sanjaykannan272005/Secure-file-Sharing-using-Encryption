@@ -2,8 +2,9 @@ services:
   - type: web
     name: secure-file-sharing-backend
     env: node
-    buildCommand: cd backend && npm install
-    startCommand: cd backend && npm start
+    buildCommand: npm install
+    startCommand: npm start
+    rootDir: backend
     envVars:
       - key: NODE_ENV
         value: production
@@ -13,8 +14,9 @@ services:
   - type: web
     name: secure-file-sharing-frontend
     env: node
-    buildCommand: cd frontend && npm install && npm run build
-    startCommand: cd frontend && npm start
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    rootDir: frontend
     envVars:
       - key: NODE_ENV
         value: production
