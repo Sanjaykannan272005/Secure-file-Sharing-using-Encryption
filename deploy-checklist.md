@@ -8,12 +8,12 @@
 - [ ] Test locally with production-like environment variables
 
 ### 2. External Services Setup
-- [ ] AWS S3 bucket created and configured
+- [ ] Supabase project created (database only, free tier)
 - [ ] Firebase project setup with Authentication enabled
 - [ ] Firebase service account key generated
 
 ### 3. Environment Variables Ready
-- [ ] AWS credentials
+- [ ] Supabase credentials (URL, anon key for database)
 - [ ] Firebase configuration
 - [ ] JWT secret generated
 - [ ] CORS origins planned

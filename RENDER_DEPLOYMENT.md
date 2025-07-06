@@ -3,10 +3,18 @@
 ## Prerequisites
 - GitHub repository with your code
 - Render account (free tier available)
-- AWS S3 bucket or MinIO server
+- Supabase project (free tier available)
 - Firebase project setup
 
 ## Deployment Steps
+
+## Setup Supabase Storage
+
+1. Go to [Supabase](https://supabase.com) and create a free account
+2. Create a new project
+3. Go to Storage → Create bucket named `secure-files`
+4. Set bucket to public or configure RLS policies
+5. Get your project URL and API keys from Settings → API
 
 ### 1. Backend Deployment
 
@@ -24,10 +32,9 @@
    ```
    NODE_ENV=production
    PORT=10000
-   AWS_ACCESS_KEY_ID=your_aws_access_key
-   AWS_SECRET_ACCESS_KEY=your_aws_secret_key
-   AWS_REGION=us-east-1
-   S3_BUCKET_NAME=your-bucket-name
+   JWT_SECRET=your-jwt-secret
+   URL_EXPIRATION_SECONDS=3600
+   CORS_ORIGIN=https://your-frontend-url.onrender.com
    FIREBASE_PROJECT_ID=your-project-id
    FIREBASE_PRIVATE_KEY=your-private-key
    FIREBASE_CLIENT_EMAIL=your-client-email
