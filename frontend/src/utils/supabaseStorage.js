@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getCurrentUserId, getCurrentUserEmail } from './auth';
 
 // Initialize Supabase client
 // Replace these with your actual Supabase URL and anon key
@@ -33,6 +34,10 @@ export const uploadFile = async (file, metadata, onProgress = () => {}) => {
     
     const downloadURL = urlData.publicUrl;
     
+    // Get current user info
+    const userId = await getCurrentUserId();
+    const userEmail = await getCurrentUserEmail();
+    
     // Save metadata to Supabase database
     const { data: fileData, error: dbError } = await supabase
       .from('file_metadata')
@@ -43,8 +48,8 @@ export const uploadFile = async (file, metadata, onProgress = () => {}) => {
         original_size: metadata.originalSize,
         download_url: downloadURL,
         created_at: new Date().toISOString(),
-        owner_id: 'user123', // Replace with actual user ID when auth is implemented
-        owner_email: 'user@example.com', // Replace with actual user email
+        owner_id: userId,
+        owner_email: userEmail,
         scan_result: metadata.scanResult || null
       }])
       .select();
@@ -60,8 +65,8 @@ export const uploadFile = async (file, metadata, onProgress = () => {}) => {
       originalSize: metadata.originalSize,
       downloadURL,
       createdAt: new Date().toISOString(),
-      ownerId: 'user123',
-      ownerEmail: 'user@example.com'
+      ownerId: userId,
+      ownerEmail: userEmail
     };
   } catch (error) {
     console.error('Upload error:', error);
@@ -72,10 +77,16 @@ export const uploadFile = async (file, metadata, onProgress = () => {}) => {
 // Get user's files
 export const getFiles = async () => {
   try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      console.warn('No authenticated user found');
+      return [];
+    }
+    
     const { data, error } = await supabase
       .from('file_metadata')
       .select('*')
-      .eq('owner_id', 'user123'); // Replace with actual user ID when auth is implemented
+      .eq('owner_id', userId);
     
     if (error) throw error;
     
@@ -127,11 +138,12 @@ export const createSharingLink = async (fileId, expirationDate = null, password 
     };
     
     // Update file with sharing link
+    const userId = await getCurrentUserId();
     const { error } = await supabase
       .from('file_metadata')
       .update({ sharing_link: sharingLink })
       .eq('id', fileId)
-      .eq('owner_id', 'user123'); // Replace with actual user ID when auth is implemented
+      .eq('owner_id', userId);
     
     if (error) throw error;
     
@@ -145,12 +157,17 @@ export const createSharingLink = async (fileId, expirationDate = null, password 
 // Delete file
 export const deleteFile = async (fileId) => {
   try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+    
     // Get file metadata first to get the storage file name
     const { data: fileData, error: fetchError } = await supabase
       .from('file_metadata')
       .select('*')
       .eq('id', fileId)
-      .eq('owner_id', 'user123') // Replace with actual user ID when auth is implemented
+      .eq('owner_id', userId)
       .single();
     
     if (fetchError) throw fetchError;
@@ -174,7 +191,7 @@ export const deleteFile = async (fileId) => {
       .from('file_metadata')
       .delete()
       .eq('id', fileId)
-      .eq('owner_id', 'user123'); // Replace with actual user ID when auth is implemented
+      .eq('owner_id', userId);
     
     if (dbError) throw dbError;
     

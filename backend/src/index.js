@@ -8,6 +8,9 @@ const path = require('path');
 // Import routes
 const fileRoutes = require('./routes/files');
 const authRoutes = require('./routes/auth');
+const adminRoutes = require('./routes/admin');
+const { router: downloadLogsRoutes } = require('./routes/downloadLogs');
+const { router: fileActivityRoutes } = require('./routes/fileActivity');
 
 // Initialize express app
 const app = express();
@@ -27,6 +30,9 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/files', fileRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/admin/download-logs', downloadLogsRoutes);
+app.use('/api/files/download-logs', fileActivityRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -49,22 +55,19 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
-// app.listen(PORT, () => {
-//   console.log(`Server running on port ${PORT}`);
-app.get('/', (req, res) => {
-  res.send('Express Server on Vercel');
+// Initialize storage
+const storage = require('./utils/storage');
+storage.initializeStorage()
+  .then(() => {
+    console.log('Storage initialized successfully');
+  })
+  .catch(err => {
+    console.error('Failed to initialize storage:', err);
+  });
 
-  
-  // Initialize storage
-  const storage = require('./utils/storage');
-  storage.initializeStorage()
-    .then(() => {
-      console.log('Storage initialized successfully');
-    })
-    .catch(err => {
-      console.error('Failed to initialize storage:', err);
-    });
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
-module.exports = app; // For testing
+module.exports = app;

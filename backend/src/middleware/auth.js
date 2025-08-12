@@ -54,7 +54,22 @@ const verifySharingAccess = (req, res, next) => {
   }
 };
 
+/**
+ * Middleware to require admin privileges
+ */
+const requireAdmin = (req, res, next) => {
+  // Simple admin check - in production, check against admin user list
+  const adminEmails = ['admin@example.com', 'admin@yourdomain.com'];
+  
+  if (!req.user || !adminEmails.includes(req.user.email)) {
+    return res.status(403).json({ error: 'Forbidden: Admin access required' });
+  }
+  
+  next();
+};
+
 module.exports = {
   authenticateUser,
-  verifySharingAccess
+  verifySharingAccess,
+  requireAdmin
 };

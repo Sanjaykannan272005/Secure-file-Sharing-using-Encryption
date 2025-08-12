@@ -26,7 +26,14 @@ router.post('/:fileId/share', authenticateUser, fileController.shareFile);
 
 // Sharing routes
 router.get('/shared/:token', verifySharingAccess, fileController.getSharedFile);
-router.get('/download/:fileId', authenticateUser, fileController.downloadFile);
-router.get('/shared/download/:token', verifySharingAccess, fileController.downloadFile);
+router.get('/download/:fileId', (req, res, next) => {
+  // Check for token in query params for preview
+  if (req.query.token) {
+    req.headers.authorization = `Bearer ${req.query.token}`;
+  }
+  authenticateUser(req, res, next);
+}, fileController.downloadFile);
+router.get('/shared/download/:token', verifySharingAccess, fileController.downloadSharedFile);
+router.post('/share-email', fileController.shareByEmail);
 
 module.exports = router;

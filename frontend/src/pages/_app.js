@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { ToastContainer } from 'react-toastify';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import ThemeProvider from '../components/ThemeProvider';
 import 'react-toastify/dist/ReactToastify.css';
 import '../styles/globals.css';
+import '../styles/themes.css';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -34,10 +36,10 @@ function MyApp({ Component, pageProps }) {
   }, []);
 
   return (
-    <>
+    <ThemeProvider>
       <Component {...pageProps} user={user} loading={loading} />
       <ToastContainer position="bottom-right" />
-    </>
+    </ThemeProvider>
   );
 }
 

@@ -270,14 +270,22 @@ const downloadFile = async (req, res) => {
       return res.status(404).json({ error: 'File not found' });
     }
     
-    // Check if user owns the file or has sharing access
-    const hasAccess = file.ownerId === req.user?.uid || 
-                     (req.fileAccess && req.fileAccess.fileId === fileId) ||
-                     req.user?.uid === 'anonymous';
-    
-    if (!hasAccess) {
+    // Check if user owns the file
+    if (file.ownerId !== req.user?.uid && req.user?.uid !== 'anonymous') {
       return res.status(403).json({ error: 'Access denied' });
     }
+    
+    // Log download activity
+    console.log(`Logging download for file: ${file.originalName} by user: ${file.ownerId}`);
+    const { addDownloadLog } = require('../routes/fileActivity');
+    addDownloadLog({
+      id: file.id,
+      originalName: file.originalName,
+      originalSize: file.originalSize,
+      originalType: file.originalType,
+      ownerId: file.ownerId,
+      ownerEmail: file.ownerEmail
+    }, req);
     
     // Get file from storage
     const fileData = await storage.getFile(file.path);
@@ -294,6 +302,143 @@ const downloadFile = async (req, res) => {
   }
 };
 
+/**
+ * Download a shared file
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+const downloadSharedFile = async (req, res) => {
+  try {
+    const { fileId } = req.fileAccess;
+    const file = fileModel.getFileById(fileId);
+    
+    if (!file) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    // Check if sharing has expired
+    if (file.sharing && file.sharing.expiresAt && new Date(file.sharing.expiresAt) < new Date()) {
+      return res.status(403).json({ error: 'Sharing link has expired' });
+    }
+    
+    // Log download activity for shared file
+    console.log(`Logging shared download for file: ${file.originalName} by owner: ${file.ownerId}`);
+    const { addDownloadLog } = require('../routes/fileActivity');
+    addDownloadLog({
+      id: file.id,
+      originalName: file.originalName,
+      originalSize: file.originalSize,
+      originalType: file.originalType,
+      ownerId: file.ownerId,
+      ownerEmail: file.ownerEmail
+    }, req);
+    
+    // Get file from storage
+    const fileData = await storage.getFile(file.path);
+    
+    // Set headers
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${file.originalName}"`);
+    
+    // Send file data
+    res.send(fileData.data);
+  } catch (error) {
+    console.error('Error downloading shared file:', error);
+    res.status(500).json({ error: 'Failed to download file' });
+  }
+};
+
+const nodemailer = require('nodemailer');
+
+// Create email transporter (using Ethereal for testing)
+let transporter;
+
+// Initialize transporter
+const initTransporter = async () => {
+  if (!transporter) {
+    try {
+      // Use Ethereal Email for testing (creates fake SMTP service)
+      const testAccount = await nodemailer.createTestAccount();
+      
+      transporter = nodemailer.createTransport({
+        host: 'smtp.ethereal.email',
+        port: 587,
+        secure: false,
+        auth: {
+          user: testAccount.user,
+          pass: testAccount.pass,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to create test transporter:', error);
+      // Fallback to console logging
+      transporter = null;
+    }
+  }
+  return transporter;
+};
+
+/**
+ * Share file by email
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+const shareByEmail = async (req, res) => {
+  try {
+    const { to, fileName, shareUrl, message } = req.body;
+    
+    if (!to || !fileName || !shareUrl) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>📁 File Shared With You</h2>
+        <p>Someone has shared a file with you:</p>
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3>${fileName}</h3>
+          ${message ? `<p><strong>Message:</strong> ${message}</p>` : ''}
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${shareUrl}" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            📥 Download File
+          </a>
+        </div>
+        <p style="color: #666; font-size: 12px;">This link may expire. Download the file as soon as possible.</p>
+      </div>
+    `;
+    
+    const emailTransporter = await initTransporter();
+    
+    if (!emailTransporter) {
+      // Fallback to console logging
+      console.log('=== EMAIL WOULD BE SENT ===');
+      console.log('To:', to);
+      console.log('Subject:', `📁 File shared: ${fileName}`);
+      console.log('Content:', emailHtml);
+      console.log('========================');
+    } else {
+      const mailOptions = {
+        from: 'noreply@fileshare.com',
+        to: to,
+        subject: `📁 File shared: ${fileName}`,
+        html: emailHtml
+      };
+      
+      const info = await emailTransporter.sendMail(mailOptions);
+      console.log('Test email sent! Preview URL:', nodemailer.getTestMessageUrl(info));
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Email sent successfully' 
+    });
+  } catch (error) {
+    console.error('Error sending email:', error);
+    res.status(500).json({ error: 'Failed to send email: ' + error.message });
+  }
+};
+
 module.exports = {
   upload,
   uploadFile,
@@ -302,5 +447,7 @@ module.exports = {
   deleteFile,
   shareFile,
   getSharedFile,
-  downloadFile
+  downloadFile,
+  downloadSharedFile,
+  shareByEmail
 };

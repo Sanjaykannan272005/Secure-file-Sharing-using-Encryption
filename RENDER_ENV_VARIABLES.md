@@ -19,7 +19,7 @@ FIREBASE_CLIENT_EMAIL=firebase-adminsdk-fbsvc@fileshare-14c20.iam.gserviceaccoun
 
 ```
 NODE_ENV=production
-NEXT_PUBLIC_API_URL=https://your-backend-app.onrender.com/api
+NEXT_PUBLIC_API_URL=https://secure-file-sharing-using-encryption.onrender.com/api
 NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyDgbDTS947w4lhp4c3ROoJT3MniG1pe7w0
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=fileshare-14c20.firebaseapp.com
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=fileshare-14c20
