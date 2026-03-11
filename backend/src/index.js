@@ -57,12 +57,17 @@ app.use((err, req, res, next) => {
 
 // Initialize storage
 const storage = require('./utils/storage');
-storage.initializeStorage()
+const { initDatabase } = require('./utils/database');
+
+Promise.all([
+  storage.initializeStorage(),
+  initDatabase()
+])
   .then(() => {
-    console.log('Storage initialized successfully');
+    console.log('Storage and database initialized successfully');
   })
   .catch(err => {
-    console.error('Failed to initialize storage:', err);
+    console.error('Failed to initialize:', err);
   });
 
 // Start server

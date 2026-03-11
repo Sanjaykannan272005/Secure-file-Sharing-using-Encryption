@@ -1,135 +1,149 @@
 /**
- * File model
- * 
- * Note: In a production application, this would typically be a database model.
- * For simplicity, we're using an in-memory store here.
- * In a real application, you would use a database like MongoDB, PostgreSQL, etc.
+ * File model - Supabase implementation
  */
+const { supabase } = require('../utils/database');
 
-// In-memory file store
-const fileStore = new Map();
-
-// Debug function to log the current state of the file store
-const debugFileStore = () => {
-  console.log('Current files in store:', Array.from(fileStore.values()));
-  return Array.from(fileStore.values());
+const createFile = async (fileData) => {
+  const { data, error } = await supabase
+    .from('file_metadata')
+    .insert({
+      id: fileData.id,
+      original_name: fileData.originalName,
+      original_type: fileData.originalType,
+      original_size: fileData.originalSize,
+      download_url: fileData.path,
+      owner_id: fileData.ownerId,
+      owner_email: fileData.ownerEmail
+    })
+    .select()
+    .single();
+  
+  if (error) throw error;
+  
+  return {
+    id: data.id,
+    path: data.download_url,
+    originalName: data.original_name,
+    originalType: data.original_type,
+    originalSize: data.original_size,
+    ownerId: data.owner_id,
+    ownerEmail: data.owner_email,
+    createdAt: data.created_at,
+    sharing: data.sharing_link
+  };
 };
 
-/**
- * Create a new file record
- * @param {Object} fileData - File data object
- * @returns {Object} Created file object
- */
-const createFile = (fileData) => {
-  const file = {
-    id: fileData.id,
-    path: fileData.path,
-    originalName: fileData.originalName,
-    originalType: fileData.originalType,
-    originalSize: fileData.originalSize,
-    ownerId: fileData.ownerId,
-    ownerEmail: fileData.ownerEmail,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+const getFileById = async (fileId) => {
+  const { data, error } = await supabase
+    .from('file_metadata')
+    .select('*')
+    .eq('id', fileId)
+    .single();
+  
+  if (error || !data) return null;
+  
+  return {
+    id: data.id,
+    path: data.download_url,
+    originalName: data.original_name,
+    originalType: data.original_type,
+    originalSize: data.original_size,
+    ownerId: data.owner_id,
+    ownerEmail: data.owner_email,
+    createdAt: data.created_at,
+    sharing: data.sharing_link
+  };
+};
+
+const getFilesByOwnerId = async (ownerId) => {
+  const { data, error } = await supabase
+    .from('file_metadata')
+    .select('*')
+    .eq('owner_id', ownerId)
+    .order('created_at', { ascending: false });
+  
+  if (error) throw error;
+  
+  return data.map(row => ({
+    id: row.id,
+    path: row.download_url,
+    originalName: row.original_name,
+    originalType: row.original_type,
+    originalSize: row.original_size,
+    ownerId: row.owner_id,
+    ownerEmail: row.owner_email,
+    createdAt: row.created_at,
+    sharing: row.sharing_link
+  }));
+};
+
+const getAllFiles = async () => {
+  const { data, error } = await supabase
+    .from('file_metadata')
+    .select('*')
+    .order('created_at', { ascending: false });
+  
+  if (error) throw error;
+  
+  return data.map(row => ({
+    id: row.id,
+    path: row.download_url,
+    originalName: row.original_name,
+    originalType: row.original_type,
+    originalSize: row.original_size,
+    ownerId: row.owner_id,
+    ownerEmail: row.owner_email,
+    createdAt: row.created_at,
+    sharing: row.sharing_link
+  }));
+};
+
+const updateFile = async (fileId, updateData) => {
+  const updates = {};
+  if (updateData.originalName) updates.original_name = updateData.originalName;
+  if (updateData.originalType) updates.original_type = updateData.originalType;
+  if (updateData.originalSize) updates.original_size = updateData.originalSize;
+  
+  if (Object.keys(updates).length === 0) return await getFileById(fileId);
+  
+  const { error } = await supabase
+    .from('file_metadata')
+    .update(updates)
+    .eq('id', fileId);
+  
+  if (error) throw error;
+  return await getFileById(fileId);
+};
+
+const deleteFile = async (fileId) => {
+  const { error } = await supabase
+    .from('file_metadata')
+    .delete()
+    .eq('id', fileId);
+  
+  return !error;
+};
+
+const createFileSharing = async (fileId, token, expiresAt) => {
+  const sharing = {
+    token,
+    expiresAt: expiresAt ? expiresAt.toISOString() : null,
+    createdAt: new Date().toISOString()
   };
   
-  fileStore.set(file.id, file);
-  console.log(`File created and stored with ID: ${file.id}`);
-  return file;
+  const { error } = await supabase
+    .from('file_metadata')
+    .update({ sharing_link: sharing })
+    .eq('id', fileId);
+  
+  if (error) throw error;
+  return await getFileById(fileId);
 };
 
-/**
- * Get a file by ID
- * @param {string} fileId - File ID
- * @returns {Object|null} File object or null if not found
- */
-const getFileById = (fileId) => {
-  return fileStore.get(fileId) || null;
-};
-
-/**
- * Get files by owner ID
- * @param {string} ownerId - Owner user ID
- * @returns {Array} Array of file objects
- */
-const getFilesByOwnerId = (ownerId) => {
-  console.log(`Getting files for owner: ${ownerId}`);
-  console.log(`Total files in store: ${fileStore.size}`);
-  
-  const files = Array.from(fileStore.values())
-    .filter(file => file.ownerId === ownerId)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  
-  console.log(`Found ${files.length} files for owner ${ownerId}`);
+const debugFileStore = async () => {
+  const files = await getAllFiles();
+  console.log('Current files in database:', files);
   return files;
-};
-
-/**
- * Get all files (for debugging)
- * @returns {Array} Array of all file objects
- */
-const getAllFiles = () => {
-  return Array.from(fileStore.values());
-};
-
-/**
- * Update a file record
- * @param {string} fileId - File ID
- * @param {Object} updateData - Data to update
- * @returns {Object|null} Updated file object or null if not found
- */
-const updateFile = (fileId, updateData) => {
-  const file = fileStore.get(fileId);
-  
-  if (!file) {
-    return null;
-  }
-  
-  const updatedFile = {
-    ...file,
-    ...updateData,
-    updatedAt: new Date().toISOString()
-  };
-  
-  fileStore.set(fileId, updatedFile);
-  return updatedFile;
-};
-
-/**
- * Delete a file record
- * @param {string} fileId - File ID
- * @returns {boolean} True if deleted, false if not found
- */
-const deleteFile = (fileId) => {
-  return fileStore.delete(fileId);
-};
-
-/**
- * Create a sharing record for a file
- * @param {string} fileId - File ID
- * @param {string} token - Sharing token
- * @param {Date} expiresAt - Expiration date
- * @returns {Object} Sharing record
- */
-const createFileSharing = (fileId, token, expiresAt) => {
-  const file = fileStore.get(fileId);
-  
-  if (!file) {
-    return null;
-  }
-  
-  // Add sharing info to file
-  const updatedFile = {
-    ...file,
-    sharing: {
-      token,
-      expiresAt: expiresAt.toISOString()
-    },
-    updatedAt: new Date().toISOString()
-  };
-  
-  fileStore.set(fileId, updatedFile);
-  return updatedFile;
 };
 
 module.exports = {
